@@ -1,0 +1,31 @@
+# Salesforce Build Pipeline
+
+ trigger: none
+
+ pr:
+ - dev
+
+ jobs:
+ - job: Validate
+ variables:
+ - group: sfdx-org-dev
+
+ steps:
+     - task: UseNode@1
+     displayName: 'Use Node.js 16.15.0'
+     inputs:
+         version: '16.15.0'
+     - bash: 
+         npm install sfdx-cli --global
+     displayName: Install Salesforce CLI
+     - task: DownloadSecureFile@1
+     name: jwtKey
+     displayName: 'Download Server JWT Key'
+     inputs:
+         secureFile: 'server.key'
+     - bash: 
+         sfdx force:auth:jwt:grant --clientid $(Clientid) --jwtkeyfile $(jwtKey.secureFilePath) --username $(SalesforceUserName) --instanceurl $(InstanceUrl) -a $(OrgAlias)
+     displayName: Authorize salesforce org
+     - bash: 
+         sfdx force:source:deploy -l RunLocalTests -c -x manifest/package.xml -u $(OrgAlias) -w 10
+     displayName: Run Validation on source code
